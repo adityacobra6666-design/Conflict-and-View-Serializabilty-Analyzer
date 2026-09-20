@@ -8,6 +8,7 @@ interface AITutorProps {
   isOpen: boolean;
   onClose: () => void;
   analysis: AnalysisResult | null;
+  initialPrompt?: string | null;
 }
 
 interface ChatMessage {
@@ -27,7 +28,8 @@ const INITIAL_GREETING: ChatMessage = {
 export const AITutor: React.FC<AITutorProps> = ({
   isOpen,
   onClose,
-  analysis
+  analysis,
+  initialPrompt
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_GREETING]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -45,6 +47,10 @@ export const AITutor: React.FC<AITutorProps> = ({
     if (isOpen) {
       const config = getStoredBYOKConfig();
       setByokConfig(config);
+
+      if (initialPrompt && initialPrompt.trim()) {
+        handleSendMessage('custom', initialPrompt.trim());
+      }
     }
   }, [isOpen]);
 

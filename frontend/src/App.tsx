@@ -10,6 +10,7 @@ import { HistoryPage } from './pages/HistoryPage';
 import { DocsPage } from './pages/DocsPage';
 import { DevelopedBy } from './pages/DevelopedBy';
 import { ReferencesPage } from './pages/ReferencesPage';
+import { QuizPage } from './pages/QuizPage';
 import { AITutor } from './components/AITutor/AITutor';
 import { ExampleSchedule, AnalysisResult } from './types';
 import { apiService } from './services/api';
@@ -22,6 +23,7 @@ export const App: React.FC = () => {
   const [scheduleText, setScheduleText] = useState<string>('R1(X), W2(X), W1(X), W3(X)');
   const [loading, setLoading] = useState<boolean>(false);
   const [isAiTutorOpen, setIsAiTutorOpen] = useState<boolean>(false);
+  const [aiTutorPrompt, setAiTutorPrompt] = useState<string | null>(null);
 
   useEffect(() => {
     if (darkMode) {
@@ -59,6 +61,11 @@ export const App: React.FC = () => {
     await handleRunAnalysis(targetText);
   };
 
+  const handleOpenAiTutorWithMessage = (prompt: string) => {
+    setAiTutorPrompt(prompt);
+    setIsAiTutorOpen(true);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors">
       {/* Header Navigation Bar */}
@@ -67,7 +74,10 @@ export const App: React.FC = () => {
         setActiveTab={setActiveTab}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
-        onOpenAiTutor={() => setIsAiTutorOpen(true)}
+        onOpenAiTutor={() => {
+          setAiTutorPrompt(null);
+          setIsAiTutorOpen(true);
+        }}
       />
 
       {/* Main View Container */}
@@ -82,7 +92,10 @@ export const App: React.FC = () => {
           <Analyzer
             initialScheduleText={scheduleText}
             examples={examples}
-            onOpenAiTutor={() => setIsAiTutorOpen(true)}
+            onOpenAiTutor={() => {
+              setAiTutorPrompt(null);
+              setIsAiTutorOpen(true);
+            }}
             onOpenWhatIf={() => setActiveTab('whatif')}
             analysis={analysis}
             setAnalysis={setAnalysis}
@@ -92,7 +105,10 @@ export const App: React.FC = () => {
           <WhatIfSimulator
             baselineAnalysis={analysis}
             examples={examples}
-            onOpenAiTutor={() => setIsAiTutorOpen(true)}
+            onOpenAiTutor={() => {
+              setAiTutorPrompt(null);
+              setIsAiTutorOpen(true);
+            }}
           />
         )}
         {activeTab === 'simulator' && (
@@ -112,6 +128,11 @@ export const App: React.FC = () => {
           />
         )}
         {activeTab === 'learn' && <Learn />}
+        {activeTab === 'quiz' && (
+          <QuizPage
+            onOpenAiTutorWithMessage={handleOpenAiTutorWithMessage}
+          />
+        )}
         {activeTab === 'history' && (
           <HistoryPage onReRunSchedule={handleStartAnalyzing} />
         )}
@@ -123,8 +144,12 @@ export const App: React.FC = () => {
       {/* AI Tutor Drawer Assistant */}
       <AITutor
         isOpen={isAiTutorOpen}
-        onClose={() => setIsAiTutorOpen(false)}
+        onClose={() => {
+          setIsAiTutorOpen(false);
+          setAiTutorPrompt(null);
+        }}
         analysis={analysis}
+        initialPrompt={aiTutorPrompt}
       />
     </div>
   );
