@@ -53,14 +53,45 @@ export const apiService = {
     return response.data;
   },
 
-  async askAiTutor(analysisData: AnalysisResult, promptType: string = 'explain_result', customQuestion?: string) {
+  async askAiTutor(
+    analysisData?: AnalysisResult | null,
+    promptType: string = 'explain_result',
+    customQuestion?: string,
+    byokConfig?: { provider?: string; baseUrl?: string; apiKey?: string; model?: string },
+    messages?: Array<{ role: 'user' | 'assistant'; content: string }>
+  ) {
     const response = await axios.post(`${API_BASE}/ai/explain`, {
-      analysis_data: analysisData,
+      analysis_data: analysisData || undefined,
       prompt_type: promptType,
-      custom_question: customQuestion
+      custom_question: customQuestion,
+      messages: messages,
+      api_key: byokConfig?.apiKey,
+      provider: byokConfig?.provider,
+      base_url: byokConfig?.baseUrl,
+      model: byokConfig?.model
     });
     return response.data;
   },
+
+  async testAiConnection(provider: string, apiKey: string, baseUrl?: string, model?: string) {
+    const response = await axios.post(`${API_BASE}/ai/test-connection`, {
+      provider: provider,
+      api_key: apiKey,
+      base_url: baseUrl,
+      model: model
+    });
+    return response.data;
+  },
+
+  async discoverAiModels(provider: string, apiKey: string, baseUrl?: string) {
+    const response = await axios.post(`${API_BASE}/ai/discover-models`, {
+      provider: provider,
+      api_key: apiKey,
+      base_url: baseUrl
+    });
+    return response.data;
+  },
+
 
   async compareAnalysis(original: AnalysisResult, modified: AnalysisResult) {
     const response = await axios.post(`${API_BASE}/compare`, {

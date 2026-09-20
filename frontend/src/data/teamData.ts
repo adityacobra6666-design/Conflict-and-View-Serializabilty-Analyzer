@@ -11,6 +11,7 @@ export interface Advisor {
   name: string;
   designation: string;
   department?: string;
+  photoUrl?: string;
 }
 
 export interface TeamConfig {
@@ -41,6 +42,7 @@ export const teamData: TeamConfig = {
   ],
   advisor: {
     name: "Dr. Swaminathan A",
-    designation: "Assistant Professor"
+    designation: "Assistant Professor",
+    photoUrl: "/assets/advisor.jpg"
   }
 };

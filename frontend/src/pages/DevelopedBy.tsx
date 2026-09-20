@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { teamData, TeamMember } from '../data/teamData';
-import { UserCheck, Award, GraduationCap, User, Building } from 'lucide-react';
+import { teamData, TeamMember, Advisor } from '../data/teamData';
+import { UserCheck, Award, GraduationCap, User } from 'lucide-react';
 
 const StudentCard: React.FC<{ member: TeamMember }> = ({ member }) => {
   const [imgError, setImgError] = useState(false);
@@ -59,6 +59,44 @@ const StudentCard: React.FC<{ member: TeamMember }> = ({ member }) => {
   );
 };
 
+const AdvisorCard: React.FC<{ advisor: Advisor }> = ({ advisor }) => {
+  const [imgError, setImgError] = useState(false);
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-slate-50/80 dark:bg-slate-950/60 rounded-3xl border border-slate-200 dark:border-slate-800">
+      <div className="relative w-36 h-36 shrink-0 rounded-2xl overflow-hidden border-2 border-emerald-500/30 dark:border-emerald-500/20 bg-white dark:bg-slate-900 flex flex-col items-center justify-center shadow-md p-1">
+        {advisor.photoUrl && !imgError ? (
+          <img
+            src={advisor.photoUrl}
+            alt={`Photograph of ${advisor.name}`}
+            className="w-full h-full object-cover rounded-xl"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-1.5 h-full w-full">
+            <User className="w-10 h-10 text-emerald-600" />
+            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+              Faculty Photo
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-2 text-center sm:text-left flex-1">
+        <span className="inline-block text-[10px] font-mono uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+          Faculty Advisor / Project Guide
+        </span>
+        <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          {advisor.name}
+        </h3>
+        <p className="text-xs sm:text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">
+          {advisor.designation}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 export const DevelopedBy: React.FC = () => {
   const { members, advisor } = teamData;
 
@@ -102,20 +140,9 @@ export const DevelopedBy: React.FC = () => {
           </h2>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-5 bg-slate-50/80 dark:bg-slate-950/60 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <div className="p-3.5 rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-600/20">
-            <Building className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
-              {advisor.name}
-            </h3>
-            <p className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
-              {advisor.designation}
-            </p>
-          </div>
-        </div>
+        <AdvisorCard advisor={advisor} />
       </div>
     </div>
   );
 };
+
