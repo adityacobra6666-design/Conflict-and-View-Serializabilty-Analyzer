@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BookOpen, Search, CheckCircle2 } from 'lucide-react';
 
-interface TheoryTopic {
+export interface TheoryTopic {
   id: string;
   title: string;
   category: string;
@@ -11,7 +11,7 @@ interface TheoryTopic {
   keyRule: string;
 }
 
-const THEORY_TOPICS: TheoryTopic[] = [
+export const THEORY_TOPICS: TheoryTopic[] = [
   {
     id: 't-1',
     title: '1. What is a Transaction?',

@@ -11,6 +11,7 @@ import { DocsPage } from './pages/DocsPage';
 import { DevelopedBy } from './pages/DevelopedBy';
 import { ReferencesPage } from './pages/ReferencesPage';
 import { QuizPage } from './pages/QuizPage';
+import { GuidePage } from './pages/GuidePage';
 import { AITutor } from './components/AITutor/AITutor';
 import { ExampleSchedule, AnalysisResult } from './types';
 import { apiService } from './services/api';
@@ -127,7 +128,15 @@ export const App: React.FC = () => {
             onSelectExample={handleStartAnalyzing}
           />
         )}
-        {activeTab === 'learn' && <Learn />}
+        {(activeTab === 'guide' || activeTab === 'learn') && (
+          <GuidePage
+            onNavigateTab={(tab) => setActiveTab(tab)}
+            onOpenAiTutor={() => {
+              setAiTutorPrompt(null);
+              setIsAiTutorOpen(true);
+            }}
+          />
+        )}
         {activeTab === 'quiz' && (
           <QuizPage
             onOpenAiTutorWithMessage={handleOpenAiTutorWithMessage}

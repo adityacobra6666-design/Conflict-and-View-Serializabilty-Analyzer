@@ -22,7 +22,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'whatif', label: 'What-If Simulator', icon: Split },
     { id: 'simulator', label: 'Simulator Stage', icon: Play },
     { id: 'examples', label: 'Preset Examples', icon: Sparkles },
-    { id: 'learn', label: 'Learn Theory', icon: BookOpen },
+    { id: 'guide', label: 'Guide & Theory', icon: BookOpen },
     { id: 'quiz', label: 'Interactive Quiz', icon: Brain },
     { id: 'history', label: 'History', icon: History },
     { id: 'docs', label: 'Documentation', icon: HelpCircle },
