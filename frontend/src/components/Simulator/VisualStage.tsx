@@ -29,9 +29,16 @@ export const VisualStage: React.FC<VisualStageProps> = ({ step, analysis }) => {
       {/* Precedence Graph Visual Stage (7 Cols) */}
       <div className="lg:col-span-7 flex flex-col gap-4">
         <PrecedenceGraph
-          graphData={filteredGraphData}
-          hasCycle={step.activeCycle !== undefined && step.activeCycle.length > 0}
+          graphData={analysis.precedence_graph}
+          hasCycle={step.state === 'CHECKING_CYCLE' && Boolean(step.activeCycle && step.activeCycle.length > 0)}
           cycles={step.activeCycle ? [step.activeCycle] : []}
+          visibleEdgeIds={step.visibleEdgeIds}
+          activeCycle={step.activeCycle}
+          activeHighlightEdgeId={
+            step.state === 'FINDING_CONFLICTS' && step.activeConflict
+              ? analysis.precedence_graph?.edges?.find(e => e.data.source === step.activeConflict?.from_tx && e.data.target === step.activeConflict?.to_tx)?.data.id
+              : undefined
+          }
         />
       </div>
 

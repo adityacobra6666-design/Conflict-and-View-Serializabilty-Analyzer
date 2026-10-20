@@ -98,9 +98,14 @@ export const SimulationStage: React.FC<SimulationStageProps> = ({
               {/* Cytoscape Graph with visible edges animated so far */}
               <PrecedenceGraph
                 graphData={analysis.precedence_graph}
-                hasCycle={analysis.has_cycle}
-                cycles={analysis.cycles}
+                hasCycle={false}
+                cycles={[]}
                 visibleEdgeIds={visibleEdgeIds}
+                activeHighlightEdgeId={
+                  activeConflict 
+                    ? analysis.precedence_graph?.edges?.find(e => e.data.source === activeConflict.from_tx && e.data.target === activeConflict.to_tx)?.data.id
+                    : undefined
+                }
               />
             </div>
           )}
@@ -122,10 +127,10 @@ export const SimulationStage: React.FC<SimulationStageProps> = ({
 
               <PrecedenceGraph
                 graphData={analysis.precedence_graph}
-                hasCycle={analysis.has_cycle}
-                cycles={analysis.cycles}
+                hasCycle={state === 'CHECKING_CYCLE' && Boolean(analysis.has_cycle)}
+                cycles={state === 'CHECKING_CYCLE' ? analysis.cycles : []}
                 visibleEdgeIds={visibleEdgeIds}
-                activeCycle={activeCycle}
+                activeCycle={state === 'CHECKING_CYCLE' ? activeCycle : undefined}
               />
             </div>
           )}

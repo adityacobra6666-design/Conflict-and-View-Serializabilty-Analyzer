@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, Bot, Sparkles, BookOpen, Layers, History, HelpCircle, Play, Split, UserCheck, Bookmark, Brain } from 'lucide-react';
+import { Database, Bot, Sparkles, BookOpen, Layers, History, HelpCircle, Play, Split, UserCheck, Bookmark, Brain, GraduationCap } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
 interface NavbarProps {
@@ -19,10 +19,11 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const navItems = [
     { id: 'analyzer', label: 'Analyzer Workbench', icon: Layers },
+    { id: 'competitive-exams', label: 'Competitive Exams', icon: GraduationCap },
     { id: 'whatif', label: 'What-If Simulator', icon: Split },
     { id: 'simulator', label: 'Simulator Stage', icon: Play },
     { id: 'examples', label: 'Preset Examples', icon: Sparkles },
-    { id: 'guide', label: 'Guide & Theory', icon: BookOpen },
+    { id: 'guide', label: 'Help', icon: BookOpen },
     { id: 'quiz', label: 'Interactive Quiz', icon: Brain },
     { id: 'history', label: 'History', icon: History },
     { id: 'docs', label: 'Documentation', icon: HelpCircle },

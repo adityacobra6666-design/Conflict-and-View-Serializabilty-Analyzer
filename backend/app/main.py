@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
-from app.routes import analyze, compare, examples, history, export, ai, health
+from app.routes import analyze, compare, examples, history, export, ai, health, upload
 
 # Create SQLite database tables if not created
 Base.metadata.create_all(bind=engine)
@@ -29,6 +29,7 @@ app.include_router(examples.router)
 app.include_router(history.router)
 app.include_router(export.router)
 app.include_router(ai.router)
+app.include_router(upload.router)
 
 @app.get("/")
 def root():

@@ -11,6 +11,7 @@ import { DocsPage } from './pages/DocsPage';
 import { DevelopedBy } from './pages/DevelopedBy';
 import { ReferencesPage } from './pages/ReferencesPage';
 import { QuizPage } from './pages/QuizPage';
+import { CompetitiveExamsPage } from './pages/CompetitiveExamsPage';
 import { GuidePage } from './pages/GuidePage';
 import { AITutor } from './components/AITutor/AITutor';
 import { ExampleSchedule, AnalysisResult } from './types';
@@ -135,6 +136,12 @@ export const App: React.FC = () => {
               setAiTutorPrompt(null);
               setIsAiTutorOpen(true);
             }}
+          />
+        )}
+        {activeTab === 'competitive-exams' && (
+          <CompetitiveExamsPage
+            onSendToAnalyzer={handleStartAnalyzing}
+            onOpenAiTutorWithMessage={handleOpenAiTutorWithMessage}
           />
         )}
         {activeTab === 'quiz' && (

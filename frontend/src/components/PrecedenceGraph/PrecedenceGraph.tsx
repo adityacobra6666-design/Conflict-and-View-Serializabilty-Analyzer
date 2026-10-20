@@ -1,11 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import cytoscape from 'cytoscape';
-import dagre from 'cytoscape-dagre';
 import { PrecedenceGraph as GraphType } from '../../types';
-import { ZoomIn, ZoomOut, Maximize2, RotateCcw, AlertTriangle, CheckCircle, Info, ShieldAlert } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, RotateCcw, AlertTriangle, CheckCircle, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-cytoscape.use(dagre);
 
 interface PrecedenceGraphProps {
   graphData: GraphType;
@@ -13,6 +10,7 @@ interface PrecedenceGraphProps {
   cycles: string[][];
   visibleEdgeIds?: string[];
   activeCycle?: string[];
+  activeHighlightEdgeId?: string;
 }
 
 export const PrecedenceGraph: React.FC<PrecedenceGraphProps> = ({
@@ -20,7 +18,8 @@ export const PrecedenceGraph: React.FC<PrecedenceGraphProps> = ({
   hasCycle,
   cycles,
   visibleEdgeIds,
-  activeCycle
+  activeCycle,
+  activeHighlightEdgeId
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
@@ -30,14 +29,17 @@ export const PrecedenceGraph: React.FC<PrecedenceGraphProps> = ({
   useEffect(() => {
     if (!containerRef.current || !graphData || graphData.nodes.length === 0) return;
 
+    // Track cycle edges only when a cycle is actually detected/active
     const cycleEdgePairs = new Set<string>();
     const activeCyclePairs = new Set<string>();
 
-    cycles.forEach(cycle => {
-      for (let i = 0; i < cycle.length - 1; i++) {
-        cycleEdgePairs.add(`${cycle[i]}->${cycle[i+1]}`);
-      }
-    });
+    if (hasCycle && cycles && cycles.length > 0) {
+      cycles.forEach(cycle => {
+        for (let i = 0; i < cycle.length - 1; i++) {
+          cycleEdgePairs.add(`${cycle[i]}->${cycle[i+1]}`);
+        }
+      });
+    }
 
     if (activeCycle && activeCycle.length > 1) {
       for (let i = 0; i < activeCycle.length - 1; i++) {
@@ -45,23 +47,165 @@ export const PrecedenceGraph: React.FC<PrecedenceGraphProps> = ({
       }
     }
 
+    // Sort transaction nodes consistently (e.g. T1, T2, T3...)
+    const sortedNodes = [...graphData.nodes].sort((a, b) => {
+      const numA = parseInt(a.data.id.replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(b.data.id.replace(/\D/g, ''), 10) || 0;
+      if (numA !== numB) return numA - numB;
+      return a.data.id.localeCompare(b.data.id);
+    });
+
+    const nodeOrderMap = new Map<string, number>();
+    sortedNodes.forEach((n, idx) => {
+      nodeOrderMap.set(n.data.id, idx);
+    });
+
+    // Pre-scan full graphData.edges to check if mutual opposite-direction edges exist
+    // between any node pair in the final graph. This ensures stable curvature throughout simulation!
+    const fullPairHasMutual: Record<string, boolean> = {};
+    const fullPairForward: Record<string, boolean> = {};
+    const fullPairReverse: Record<string, boolean> = {};
+
+    graphData.edges.forEach(e => {
+      const srcIdx = nodeOrderMap.get(e.data.source) ?? 0;
+      const tgtIdx = nodeOrderMap.get(e.data.target) ?? 0;
+      const pairKey = srcIdx < tgtIdx ? `${e.data.source}:${e.data.target}` : `${e.data.target}:${e.data.source}`;
+      if (srcIdx < tgtIdx) fullPairForward[pairKey] = true;
+      else if (srcIdx > tgtIdx) fullPairReverse[pairKey] = true;
+      if (fullPairForward[pairKey] && fullPairReverse[pairKey]) {
+        fullPairHasMutual[pairKey] = true;
+      }
+    });
+
+    // Compute stable layout positions for ALL nodes in advance
+    const containerWidth = containerRef.current.clientWidth || 640;
+    const containerHeight = Math.max(containerRef.current.clientHeight || 340, 340);
+    const nodeCount = sortedNodes.length;
+
+    const nodePositions: Record<string, { x: number; y: number }> = {};
+
+    if (nodeCount <= 4) {
+      // Horizontal linear layout with generous spacing
+      const spacing = Math.min(220, Math.max(160, (containerWidth - 140) / Math.max(1, nodeCount - 1)));
+      const startX = (containerWidth - (nodeCount - 1) * spacing) / 2;
+      const centerY = containerHeight / 2;
+
+      sortedNodes.forEach((node, idx) => {
+        nodePositions[node.data.id] = {
+          x: Math.round(startX + idx * spacing),
+          y: Math.round(centerY)
+        };
+      });
+    } else {
+      // Circular polygon layout for 5+ transactions
+      const radius = Math.min(containerWidth, containerHeight) * 0.36;
+      const centerX = containerWidth / 2;
+      const centerY = containerHeight / 2;
+
+      sortedNodes.forEach((node, idx) => {
+        const angle = (2 * Math.PI * idx) / nodeCount - Math.PI / 2;
+        nodePositions[node.data.id] = {
+          x: Math.round(centerX + radius * Math.cos(angle)),
+          y: Math.round(centerY + radius * Math.sin(angle))
+        };
+      });
+    }
+
+    // Determine nodes participating in cycles to highlight ONLY those nodes
+    const cycleNodesSet = new Set<string>();
+    if (hasCycle) {
+      if (activeCycle && activeCycle.length > 1) {
+        activeCycle.forEach(id => cycleNodesSet.add(id));
+      } else if (cycles && cycles.length > 0) {
+        cycles.forEach(c => c.forEach(id => cycleNodesSet.add(id)));
+      }
+    }
+
     const elements: cytoscape.ElementDefinition[] = [];
 
-    // Add Nodes
-    graphData.nodes.forEach(n => {
+    // Add Nodes with permanent preset positions so they NEVER jump between steps
+    sortedNodes.forEach(n => {
+      const isCycleNode = cycleNodesSet.has(n.data.id);
       elements.push({
-        data: { id: n.data.id, label: n.data.label }
+        data: { id: n.data.id, label: n.data.label },
+        position: nodePositions[n.data.id],
+        classes: isCycleNode ? 'cycle-node' : 'normal-node'
       });
     });
 
-    // Add Edges (filter by visibleEdgeIds if provided)
-    graphData.edges.forEach(e => {
-      if (visibleEdgeIds && !visibleEdgeIds.includes(e.data.id)) return;
+    // Filter edges to only those that should be visible at current step
+    const edgesToRender = graphData.edges.filter(e => {
+      if (visibleEdgeIds && !visibleEdgeIds.includes(e.data.id)) return false;
+      return true;
+    });
 
+    const forwardSeen: Record<string, number> = {};
+    const reverseSeen: Record<string, number> = {};
+
+    edgesToRender.forEach(e => {
       const edgeKey = `${e.data.source}->${e.data.target}`;
-      const isCycleEdge = cycleEdgePairs.has(edgeKey) || activeCyclePairs.has(edgeKey);
+      const isCycleEdge = hasCycle && (
+        activeCycle && activeCycle.length > 1 
+          ? activeCyclePairs.has(edgeKey) 
+          : cycleEdgePairs.has(edgeKey)
+      );
+      const isHighlighted = activeHighlightEdgeId === e.data.id;
+      const isSelfLoop = e.data.source === e.data.target;
+
+      const srcIdx = nodeOrderMap.get(e.data.source) ?? 0;
+      const tgtIdx = nodeOrderMap.get(e.data.target) ?? 0;
+      const pairKey = srcIdx < tgtIdx ? `${e.data.source}:${e.data.target}` : `${e.data.target}:${e.data.source}`;
+      const isMutual = Boolean(fullPairHasMutual[pairKey]);
+
+      let edgeClass = 'normal-edge';
+      let controlDistance = -42;
+
+      if (isSelfLoop) {
+        edgeClass = 'self-loop';
+      } else if (srcIdx < tgtIdx) {
+        // FORWARD EDGE (Left to Right in linear layout):
+        // Curve ABOVE the nodes (negative distance bends to left of travel, i.e. UPWARDS)
+        const forwardIdx = forwardSeen[pairKey] || 0;
+        forwardSeen[pairKey] = forwardIdx + 1;
+        const span = tgtIdx - srcIdx;
+
+        if (span > 1) {
+          // Span skips over intermediate node(s) (e.g. T1 -> T3 skipping T2)
+          // Curve high above intermediate node boxes and adjacent edges
+          controlDistance = -135 - (span - 2) * 35 - forwardIdx * 28;
+        } else {
+          // Adjacent nodes (span == 1, e.g. T1 -> T2)
+          controlDistance = (isMutual ? -64 : -44) - forwardIdx * 24;
+        }
+        edgeClass = 'curved-edge';
+      } else {
+        // REVERSE EDGE (Right to Left in linear layout):
+        // Curve BELOW the nodes (Cytoscape inverts normal on swapped pair edge, pushing it DOWNWARDS)
+        const reverseIdx = reverseSeen[pairKey] || 0;
+        reverseSeen[pairKey] = reverseIdx + 1;
+        const span = srcIdx - tgtIdx;
+
+        if (span > 1) {
+          // Backward span skips over intermediate node(s) (e.g. T3 -> T1 skipping T2)
+          // Curve deep below intermediate node boxes and adjacent edges
+          controlDistance = -135 - (span - 2) * 35 - reverseIdx * 28;
+        } else {
+          // Adjacent reverse nodes (span == 1, e.g. T2 -> T1)
+          controlDistance = (isMutual ? -64 : -44) - reverseIdx * 24;
+        }
+        edgeClass = 'curved-edge';
+      }
+
+      if (isCycleEdge) {
+        edgeClass += ' cycle-edge';
+      } else if (isHighlighted) {
+        edgeClass += ' highlight-newest';
+      }
+
       const conflictCount = e.data.conflicts?.length || 1;
-      const cleanLabel = conflictCount === 1 ? `${e.data.conflicts[0]?.op1_raw} → ${e.data.conflicts[0]?.op2_raw}` : `${conflictCount} conflicts`;
+      const cleanLabel = conflictCount === 1 
+        ? `${e.data.conflicts[0]?.op1_raw} → ${e.data.conflicts[0]?.op2_raw}` 
+        : `${conflictCount} conflicts`;
 
       elements.push({
         data: {
@@ -71,15 +215,21 @@ export const PrecedenceGraph: React.FC<PrecedenceGraphProps> = ({
           label: cleanLabel,
           explanation: e.data.explanation,
           conflicts: e.data.conflicts,
-          isCycle: isCycleEdge
-        }
+          isCycle: isCycleEdge,
+          controlDistance: controlDistance
+        },
+        classes: edgeClass
       });
     });
 
     const isDarkMode = document.documentElement.classList.contains('dark');
 
-    // Destroy existing instance safely before re-creating
-    if (cyRef.current) {
+    // Preserve previous pan and zoom if cyRef already exists so user won't get disoriented
+    let prevZoom: number | null = null;
+    let prevPan: cytoscape.Position | null = null;
+    if (cyRef.current && !cyRef.current.destroyed()) {
+      prevZoom = cyRef.current.zoom();
+      prevPan = cyRef.current.pan();
       cyRef.current.destroy();
       cyRef.current = null;
     }
@@ -93,8 +243,8 @@ export const PrecedenceGraph: React.FC<PrecedenceGraphProps> = ({
           style: {
             'shape': 'round-rectangle',
             'background-color': isDarkMode ? '#1e293b' : '#ffffff',
-            'border-color': hasCycle ? '#ef4444' : '#2563eb',
-            'border-width': 2,
+            'border-color': isDarkMode ? '#3b82f6' : '#2563eb',
+            'border-width': 2.5,
             'color': isDarkMode ? '#f8fafc' : '#0f172a',
             'label': 'data(label)',
             'text-valign': 'center',
@@ -102,37 +252,86 @@ export const PrecedenceGraph: React.FC<PrecedenceGraphProps> = ({
             'font-family': 'Inter, system-ui, sans-serif',
             'font-weight': 700,
             'font-size': '13px',
-            'width': 64,
-            'height': 38,
-            'padding': '8px',
-            'overlay-opacity': 0
+            'width': 68,
+            'height': 40,
+            'padding': '6px',
+            'overlay-opacity': 0,
+            'z-index': 10
+          }
+        },
+        {
+          selector: 'node.cycle-node',
+          style: {
+            'border-color': '#ef4444',
+            'border-width': 3,
+            'background-color': isDarkMode ? '#450a0a' : '#fef2f2',
+            'color': isDarkMode ? '#fca5a5' : '#b91c1c',
+            'z-index': 20
           }
         },
         {
           selector: 'edge',
           style: {
-            'width': 2.5,
+            'width': 2.2,
             'line-color': isDarkMode ? '#64748b' : '#475569',
             'target-arrow-color': isDarkMode ? '#64748b' : '#475569',
             'target-arrow-shape': 'triangle',
+            'arrow-scale': 1.6,
             'curve-style': 'bezier',
             'label': 'data(label)',
             'font-size': '10px',
-            'font-family': 'Inter, monospace',
-            'color': isDarkMode ? '#cbd5e1' : '#334155',
+            'font-family': 'JetBrains Mono, monospace',
+            'font-weight': 600,
+            'color': isDarkMode ? '#e2e8f0' : '#1e293b',
             'text-background-color': isDarkMode ? '#0f172a' : '#ffffff',
             'text-background-opacity': 0.95,
             'text-background-padding': '3px',
-            'text-rotation': 'autorotate'
+            'text-background-shape': 'roundrectangle',
+            'text-border-color': isDarkMode ? '#475569' : '#cbd5e1',
+            'text-border-width': 1,
+            'text-border-opacity': 0.9,
+            'text-rotation': 'autorotate',
+            'target-distance-from-node': 6,
+            'source-distance-from-node': 6
           }
         },
         {
-          selector: 'edge[?isCycle]',
+          selector: 'edge.curved-edge',
+          style: {
+            'curve-style': 'unbundled-bezier',
+            'control-point-distances': 'data(controlDistance)',
+            'control-point-weights': 0.5
+          }
+        },
+        {
+          selector: 'edge.self-loop',
+          style: {
+            'curve-style': 'bezier',
+            'loop-direction': '-45deg',
+            'loop-sweep': '-90deg',
+            'control-point-step-size': 50
+          }
+        },
+        {
+          selector: 'edge.highlight-newest',
+          style: {
+            'width': 3.5,
+            'line-color': '#2563eb',
+            'target-arrow-color': '#2563eb',
+            'color': '#2563eb',
+            'arrow-scale': 1.8,
+            'z-index': 50
+          }
+        },
+        {
+          selector: 'edge.cycle-edge',
           style: {
             'width': 3.5,
             'line-color': '#ef4444',
             'target-arrow-color': '#ef4444',
-            'color': '#dc2626'
+            'color': '#ef4444',
+            'arrow-scale': 1.8,
+            'z-index': 100
           }
         },
         {
@@ -146,11 +345,9 @@ export const PrecedenceGraph: React.FC<PrecedenceGraphProps> = ({
         }
       ],
       layout: {
-        name: 'dagre',
-        rankDir: 'LR',
-        nodeSep: 60,
-        rankSep: 90,
-        padding: 40
+        name: 'preset',
+        positions: nodePositions,
+        fit: false
       } as any
     });
 
@@ -167,23 +364,27 @@ export const PrecedenceGraph: React.FC<PrecedenceGraphProps> = ({
 
     cyRef.current = cy;
 
-    // Automatically fit to viewport after render
-    setTimeout(() => {
-      if (cyRef.current && !cyRef.current.destroyed()) {
-        cyRef.current.resize();
-        cyRef.current.fit(undefined, 40);
-      }
-    }, 50);
+    // Restore previous pan/zoom if applicable, otherwise fit gracefully
+    if (prevZoom !== null && prevPan !== null) {
+      cy.zoom(prevZoom);
+      cy.pan(prevPan);
+    } else {
+      setTimeout(() => {
+        if (cyRef.current && !cyRef.current.destroyed()) {
+          cyRef.current.resize();
+          cyRef.current.fit(undefined, 35);
+        }
+      }, 30);
+    }
 
-  }, [graphData, hasCycle, cycles, visibleEdgeIds, activeCycle]);
+  }, [graphData, hasCycle, cycles, visibleEdgeIds, activeCycle, activeHighlightEdgeId]);
 
   // ResizeObserver for container bounds changes
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(() => {
       if (cyRef.current && !cyRef.current.destroyed()) {
         cyRef.current.resize();
-        cyRef.current.fit(undefined, 40);
       }
     });
     observer.observe(containerRef.current);
@@ -193,15 +394,15 @@ export const PrecedenceGraph: React.FC<PrecedenceGraphProps> = ({
   const handleZoomIn = () => cyRef.current?.zoom(cyRef.current.zoom() * 1.2);
   const handleZoomOut = () => cyRef.current?.zoom(cyRef.current.zoom() * 0.8);
   const handleFit = () => {
-    if (cyRef.current) {
+    if (cyRef.current && !cyRef.current.destroyed()) {
       cyRef.current.resize();
-      cyRef.current.fit(undefined, 40);
+      cyRef.current.fit(undefined, 35);
     }
   };
   const handleReset = () => {
-    if (cyRef.current) {
+    if (cyRef.current && !cyRef.current.destroyed()) {
       cyRef.current.reset();
-      cyRef.current.fit(undefined, 40);
+      cyRef.current.fit(undefined, 35);
     }
   };
 
@@ -246,7 +447,7 @@ export const PrecedenceGraph: React.FC<PrecedenceGraphProps> = ({
       </div>
 
       {/* Graph Viewport */}
-      <div className="relative w-full h-[260px] bg-slate-50/60 dark:bg-slate-950/80 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="relative w-full h-[340px] bg-slate-50/60 dark:bg-slate-950/80 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div ref={containerRef} className="w-full h-full" />
         <div className="absolute bottom-2 left-2 text-[10px] text-slate-500 dark:text-slate-400 bg-white/90 dark:bg-slate-900/90 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
           💡 Click edge to inspect conflict details

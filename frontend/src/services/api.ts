@@ -99,5 +99,16 @@ export const apiService = {
       modified: modified
     });
     return response.data;
+  },
+
+  async uploadQuestionFile(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await axios.post(`${API_BASE}/upload/question`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
   }
 };

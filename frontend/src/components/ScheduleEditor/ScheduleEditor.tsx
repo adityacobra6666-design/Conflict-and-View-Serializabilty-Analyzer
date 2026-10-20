@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Play, RotateCcw, Plus, Trash2, ArrowUp, ArrowDown, FileText, Table, Sparkles, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Play, RotateCcw, Plus, Trash2, ArrowUp, ArrowDown, FileText, Table, Sparkles, CheckCircle, AlertTriangle, Upload } from 'lucide-react';
 import { ExampleSchedule } from '../../types';
+import { UploadQuestionModal } from './UploadQuestionModal';
 
 interface ScheduleEditorProps {
   scheduleText: string;
@@ -32,6 +33,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     { id: 4, tx: 'T3', type: 'WRITE', item: 'X' }
   ]);
   const [selectedExampleId, setSelectedExampleId] = useState<string>('');
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
 
   const syncTableToText = (rows: TableRow[]) => {
     const text = rows.map(r => `${r.type === 'READ' ? 'R' : 'W'}${r.tx.replace(/\D/g, '') || '1'}(${r.item.toUpperCase() || 'X'})`).join(', ');
@@ -93,29 +95,40 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">Define transaction operations sequentially</p>
         </div>
-        <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700/60">
+        <div className="flex items-center gap-1.5">
           <button
-            onClick={() => setMode('text')}
-            className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
-              mode === 'text'
-                ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
+            onClick={() => setIsUploadModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors shadow-xs"
+            title="Upload a question image (PNG, JPG) or PDF document"
           >
-            <FileText className="w-3.5 h-3.5" />
-            Text Mode
+            <Upload className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            Upload Question
           </button>
-          <button
-            onClick={() => setMode('table')}
-            className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
-              mode === 'table'
-                ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Table className="w-3.5 h-3.5" />
-            Visual Table
-          </button>
+
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700/60">
+            <button
+              onClick={() => setMode('text')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                mode === 'text'
+                  ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Text Mode
+            </button>
+            <button
+              onClick={() => setMode('table')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                mode === 'table'
+                  ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Table className="w-3.5 h-3.5" />
+              Visual Table
+            </button>
+          </div>
         </div>
       </div>
 
@@ -280,6 +293,18 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
           <RotateCcw className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Upload Question Image/PDF Modal */}
+      <UploadQuestionModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onConfirmSchedule={(text, andAnalyze) => {
+          setScheduleText(text);
+          if (andAnalyze) {
+            onAnalyze(text);
+          }
+        }}
+      />
     </div>
   );
 };

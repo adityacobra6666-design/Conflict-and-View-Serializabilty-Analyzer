@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CombinedResult, AnalysisResult } from '../../types';
 import { CheckCircle2, XCircle, Sparkles, HelpCircle, ArrowRight, Table } from 'lucide-react';
+import { TransactionViewEquivalenceTable } from '../ViewAnalysis/TransactionViewEquivalenceTable';
 
 interface ComparisonProps {
   analysis: AnalysisResult;
@@ -127,6 +128,9 @@ export const Comparison: React.FC<ComparisonProps> = ({ analysis }) => {
           </button>
         </div>
       </div>
+
+      {/* FEATURE 4: Transaction and View-Equivalence Analysis Table */}
+      <TransactionViewEquivalenceTable analysis={analysis} />
 
       {/* Clean Comparison Matrix Table */}
       <div className="bg-white dark:bg-slate-900/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-3">

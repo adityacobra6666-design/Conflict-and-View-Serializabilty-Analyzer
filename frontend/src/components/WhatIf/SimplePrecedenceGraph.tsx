@@ -94,25 +94,42 @@ export const SimplePrecedenceGraph: React.FC<SimplePrecedenceGraphProps> = ({
             const color = isCycleEdge ? '#ef4444' : '#a855f7';
             const markerId = isCycleEdge ? 'url(#arrow-cycle)' : 'url(#arrow-normal)';
 
-            // Control point for subtle quadratic curve if multiple nodes
-            const midX = (src.x + tgt.x) / 2;
-            const midY = (src.y + tgt.y) / 2;
+            const hasReverse = edges.some(e => e.data.source === edge.data.target && e.data.target === edge.data.source);
+            const dx = tgt.x - src.x;
+            const dy = tgt.y - src.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const nx = -dy / dist;
+            const ny = dx / dist;
+
+            let offset = 0;
+            if (hasReverse) {
+              offset = 26;
+            } else if (isCycleEdge) {
+              offset = 16;
+            }
+
+            const ctrlX = (src.x + tgt.x) / 2 + nx * offset;
+            const ctrlY = (src.y + tgt.y) / 2 + ny * offset;
+            const pathD = offset === 0 
+              ? `M ${src.x} ${src.y} L ${tgt.x} ${tgt.y}`
+              : `M ${src.x} ${src.y} Q ${ctrlX} ${ctrlY} ${tgt.x} ${tgt.y}`;
+
+            const labelX = (src.x + tgt.x) / 2 + nx * (offset * 0.7);
+            const labelY = (src.y + tgt.y) / 2 + ny * (offset * 0.7) - 4;
 
             return (
               <g key={edge.data.id}>
-                <line
-                  x1={src.x}
-                  y1={src.y}
-                  x2={tgt.x}
-                  y2={tgt.y}
+                <path
+                  d={pathD}
+                  fill="none"
                   stroke={color}
                   strokeWidth={isCycleEdge ? "2.5" : "2"}
                   strokeDasharray={isCycleEdge ? "4 2" : undefined}
                   markerEnd={markerId}
                 />
                 <text
-                  x={midX}
-                  y={midY - 6}
+                  x={labelX}
+                  y={labelY}
                   fill={color}
                   fontSize="9"
                   fontFamily="monospace"

@@ -64,10 +64,10 @@ export const GuidePage: React.FC<GuidePageProps> = ({ onNavigateTab, onOpenAiTut
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-mono text-xs font-bold uppercase tracking-wider">
-              <BookOpen className="w-4 h-4 text-blue-600" /> Platform Guide & DBMS Theory Documentation
+              <BookOpen className="w-4 h-4 text-blue-600" /> Platform Help & DBMS Theory Documentation
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Complete User Guide & System Reference
+              Help & System Reference
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-3xl leading-relaxed">
               A complete guide to analyzing transaction schedules, understanding conflict and view serializability, using simulations, taking interactive quizzes, and configuring AI-assisted learning.
@@ -110,7 +110,7 @@ export const GuidePage: React.FC<GuidePageProps> = ({ onNavigateTab, onOpenAiTut
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="🔍 Search guide concepts, algorithms, features, BYOK, quiz..."
+            placeholder="🔍 Search help concepts, algorithms, features, BYOK, quiz..."
             className="w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-xs pl-10 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
           />
         </div>
@@ -152,7 +152,7 @@ export const GuidePage: React.FC<GuidePageProps> = ({ onNavigateTab, onOpenAiTut
             className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200"
           >
             <span className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-blue-600" /> Guide Table of Contents
+              <BookOpen className="w-4 h-4 text-blue-600" /> Help Table of Contents
             </span>
             {isTocMobileOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
