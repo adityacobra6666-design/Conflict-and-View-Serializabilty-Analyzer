@@ -255,9 +255,9 @@ export const WhatIfSimulatorContent: React.FC<WhatIfSimulatorProps> = ({
       </div>
 
       {/* SECTION 1: SIDE-BY-SIDE SCHEDULE EDITORS (BASELINE vs EXPERIMENTAL) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 items-start w-full min-w-0">
         {/* READ-ONLY ORIGINAL BASELINE PANEL */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col gap-4 w-full min-w-0">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <div>
               <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400 block">
@@ -267,12 +267,12 @@ export const WhatIfSimulatorContent: React.FC<WhatIfSimulatorProps> = ({
                 Baseline Schedule
               </h3>
             </div>
-            <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-mono font-bold">
+            <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-mono font-bold shrink-0">
               🔒 Baseline Immutable
             </span>
           </div>
 
-          <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100">
+          <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100 break-all whitespace-pre-wrap">
             {effectiveBaseline.schedule_text}
           </div>
 
@@ -297,7 +297,7 @@ export const WhatIfSimulatorContent: React.FC<WhatIfSimulatorProps> = ({
         </div>
 
         {/* EDITABLE EXPERIMENTAL SCHEDULE PANEL */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col gap-4 w-full min-w-0">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <div>
               <span className="text-[10px] uppercase font-bold tracking-wider text-purple-600 dark:text-purple-400 block">

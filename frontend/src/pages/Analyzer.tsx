@@ -6,11 +6,12 @@ import { SimulationHeader } from '../components/Simulator/SimulationHeader';
 import { SimulationStage } from '../components/Simulator/SimulationStage';
 import { Explanation } from '../components/Explanation/Explanation';
 import { Comparison } from '../components/Comparison/Comparison';
+import { PrecedenceGraph } from '../components/PrecedenceGraph/PrecedenceGraph';
 import { ExportModal } from '../components/Export/ExportModal';
 import { AnalysisResult, ExampleSchedule } from '../types';
 import { generateSimulationSteps } from '../services/simulationEngine';
 import { apiService } from '../services/api';
-import { Download, Bot, Layers, Sparkles, Activity, Split } from 'lucide-react';
+import { Download, Bot, Layers, Sparkles, Activity, Split, GitFork } from 'lucide-react';
 
 interface AnalyzerProps {
   initialScheduleText?: string;
@@ -112,55 +113,58 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
   return (
     <div className="flex flex-col gap-6 max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Top Header & Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-slate-900/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-blue-600 text-white shadow-md shadow-blue-600/20">
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 bg-white dark:bg-slate-900/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm w-full min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="p-2.5 rounded-xl bg-blue-600 text-white shadow-md shadow-blue-600/20 shrink-0">
             <Layers className="w-5 h-5" />
           </div>
-          <div>
-            <h1 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2 tracking-tight">
-              Interactive Serializability Simulator
-              <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-emerald-500/30">
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white flex flex-wrap items-center gap-2 tracking-tight">
+              <span>Interactive Serializability Simulator</span>
+              <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-emerald-500/30 shrink-0">
                 Real Backend API Engine
               </span>
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Watch Conflict & View Serializability Algorithms Execute Step-by-Step</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Watch Conflict & View Serializability Algorithms Execute Step-by-Step</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
           {onOpenWhatIf && (
             <button
               onClick={onOpenWhatIf}
               disabled={!analysis}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900 font-bold text-xs border border-purple-200 dark:border-purple-800 transition-colors disabled:opacity-40 shadow-sm"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 rounded-xl bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900 font-bold text-xs border border-purple-200 dark:border-purple-800 transition-colors disabled:opacity-40 shadow-xs cursor-pointer"
             >
-              <Split className="w-4 h-4 text-purple-600 dark:text-purple-400" /> 🔄 What-If Simulator
+              <Split className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+              <span>What-If Simulator</span>
             </button>
           )}
 
           <button
             onClick={() => setIsExportOpen(true)}
             disabled={!analysis}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-semibold text-xs border border-slate-200 dark:border-slate-700 transition-colors disabled:opacity-40 shadow-sm"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-semibold text-xs border border-slate-200 dark:border-slate-700 transition-colors disabled:opacity-40 shadow-xs cursor-pointer"
           >
-            <Download className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Export PDF / JSON / CSV
+            <Download className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+            <span>Export</span>
           </button>
 
           <button
             onClick={onOpenAiTutor}
             disabled={!analysis}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition-all hover:scale-105 disabled:opacity-40"
+            className="flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition-all hover:scale-105 disabled:opacity-40 cursor-pointer"
           >
-            <Bot className="w-4 h-4 text-white" /> AI Tutor Assistant
+            <Bot className="w-4 h-4 text-white shrink-0" />
+            <span>AI Tutor</span>
           </button>
         </div>
       </div>
 
-      {/* 3-AREA MAIN LAYOUT (LEFT - CENTER - RIGHT) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* AREA 1 (LEFT 3 Cols): Schedule Input & Operations Sequence */}
-        <div className="lg:col-span-3 flex flex-col gap-4">
+      {/* BALANCED TWO-COLUMN RESPONSIVE LAYOUT (INPUT & GUIDANCE on LEFT | INTERACTIVE RESULTS on RIGHT) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start w-full min-w-0">
+        {/* COLUMN 1: MAIN INPUT & GUIDANCE PANEL (5 of 12 columns on desktop) */}
+        <div className="lg:col-span-5 flex flex-col gap-4 sm:gap-5 w-full min-w-0">
           <ScheduleEditor
             scheduleText={scheduleText}
             setScheduleText={setScheduleText}
@@ -177,10 +181,17 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
               activeConflict={currentStep?.activeConflict}
             />
           )}
+
+          {/* Educational Step-by-Step Stepper Guidance */}
+          <Explanation
+            analysis={analysis}
+            activeStep={mappedExplanationStep}
+            setActiveStep={() => {}}
+          />
         </div>
 
-        {/* AREA 2 (CENTER 6 Cols HERO STAGE): Simulation Header & Stage */}
-        <div className="lg:col-span-6 flex flex-col gap-4">
+        {/* COLUMN 2: ANALYSIS & SIMULATION RESULTS PANEL (7 of 12 columns on desktop) */}
+        <div className="lg:col-span-7 flex flex-col gap-4 sm:gap-5 w-full min-w-0">
           {analysis && analysis.success && currentStep ? (
             <>
               {/* Simulation Header with Controls & Progress */}
@@ -204,7 +215,7 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
               />
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center p-16 text-center text-slate-500 bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 min-h-[440px] shadow-sm">
+            <div className="flex flex-col items-center justify-center p-10 sm:p-16 text-center text-slate-500 bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 min-h-[440px] shadow-sm w-full min-w-0">
               <div className="p-4 rounded-full bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 mb-3 border border-blue-200 dark:border-blue-800">
                 <Activity className="w-8 h-8 animate-pulse" />
               </div>
@@ -215,25 +226,48 @@ export const Analyzer: React.FC<AnalyzerProps> = ({
             </div>
           )}
         </div>
-
-        {/* AREA 3 (RIGHT 3 Cols): Live Explanation Stepper */}
-        <div className="lg:col-span-3">
-          <Explanation
-            analysis={analysis}
-            activeStep={mappedExplanationStep}
-            setActiveStep={() => {}}
-          />
-        </div>
       </div>
 
-      {/* AREA 4 (BOTTOM FULL WIDTH 12 Cols): Final Result Revealed on Completion */}
+      {/* FINAL VERDICT: Revealed on Completion */}
       {analysis && analysis.success && currentStep?.state === 'COMPLETED' && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
+          className="w-full min-w-0"
         >
           <Comparison analysis={analysis} />
+        </motion.div>
+      )}
+
+      {/* FINAL PRECEDENCE GRAPH: Shown after simulation completion */}
+      {analysis && analysis.success && currentStep?.state === 'COMPLETED' && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.1 }}
+          className="w-full min-w-0"
+        >
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                <GitFork className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  Final Precedence Graph
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Complete dependency graph for the entire schedule
+                </p>
+              </div>
+            </div>
+            <PrecedenceGraph
+              graphData={analysis.precedence_graph}
+              hasCycle={analysis.has_cycle}
+              cycles={analysis.cycles}
+            />
+          </div>
         </motion.div>
       )}
 
