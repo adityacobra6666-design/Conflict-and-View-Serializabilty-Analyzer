@@ -159,3 +159,26 @@ export interface HistoryItem {
   headline: string;
   created_at: string;
 }
+
+export interface CandidateSchedule {
+  label: string;
+  schedule_text: string;
+  operation_count: number;
+}
+
+export interface QuestionUploadResponse {
+  success: boolean;
+  filename: string;
+  file_type: 'image' | 'pdf';
+  raw_text: string;
+  parsed_schedule: string;
+  candidate_schedules: CandidateSchedule[];
+  operation_count: number;
+  uncertain_parts: string[];
+  is_valid: boolean;
+  validation_errors: string[];
+  validation_warnings: string[];
+  ai_available: boolean;
+  ai_used: boolean;
+  message: string;
+}

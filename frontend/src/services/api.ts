@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AnalysisResult, ExampleSchedule, HistoryItem } from '../types';
+import { AnalysisResult, ExampleSchedule, HistoryItem, QuestionUploadResponse } from '../types';
 
 const API_BASE = '/api';
 
@@ -101,10 +101,10 @@ export const apiService = {
     return response.data;
   },
 
-  async uploadQuestionFile(file: File) {
+  async uploadQuestionFile(file: File): Promise<QuestionUploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await axios.post(`${API_BASE}/upload/question`, formData, {
+    const response = await axios.post<QuestionUploadResponse>(`${API_BASE}/upload/question`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }

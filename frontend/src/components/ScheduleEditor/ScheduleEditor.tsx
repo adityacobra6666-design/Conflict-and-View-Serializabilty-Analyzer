@@ -128,7 +128,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
             type="button"
             onClick={() => setIsUploadModalOpen(true)}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors shadow-xs cursor-pointer"
-            title="Upload a question image (PNG, JPG) or PDF document"
+            title="Upload a question image (PNG, JPG, WEBP) or PDF document"
           >
             <Upload className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
             <span className="whitespace-nowrap">Upload Question</span>
@@ -354,6 +354,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
         onClose={() => setIsUploadModalOpen(false)}
         onConfirmSchedule={(text, andAnalyze) => {
           setScheduleText(text);
+          setMode('text');
           if (andAnalyze) {
             onAnalyze(text);
           }
