@@ -228,7 +228,7 @@ def extract_table_schedule(text: str) -> List[str]:
     transaction column based on the horizontal position of the operation
     relative to the transaction headers.
     """
-    lines = text.splitlines()
+    lines = [line.expandtabs(8) for line in text.splitlines()]
     if not lines:
         return []
 

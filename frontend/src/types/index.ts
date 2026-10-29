@@ -169,7 +169,7 @@ export interface CandidateSchedule {
 export interface QuestionUploadResponse {
   success: boolean;
   filename: string;
-  file_type: 'image' | 'pdf';
+  file_type: 'image' | 'pdf' | 'text';
   raw_text: string;
   parsed_schedule: string;
   candidate_schedules: CandidateSchedule[];

@@ -18,7 +18,7 @@ import httpx
 
 router = APIRouter(prefix="/api/upload", tags=["Document & Question Upload"])
 
-SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".pdf"}
+SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".pdf", ".txt"}
 
 
 def preprocess_image(file_bytes: bytes) -> Image.Image:
@@ -98,7 +98,7 @@ async def upload_question_endpoint(file: UploadFile = File(...)):
     if ext not in SUPPORTED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file format '{ext}'. Supported formats: PNG, JPG, JPEG, WEBP, PDF."
+            detail=f"Unsupported file format '{ext}'. Supported formats: PNG, JPG, JPEG, WEBP, PDF, TXT."
         )
 
     file_bytes = await file.read()
@@ -112,8 +112,18 @@ async def upload_question_endpoint(file: UploadFile = File(...)):
     message = ""
     ocr_succeeded = False
 
-    # Case A: PDF Document
-    if ext == ".pdf":
+    # Case A: Plain Text File (.txt)
+    if ext == ".txt":
+        try:
+            extracted_text = file_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            extracted_text = file_bytes.decode("latin-1", errors="replace")
+        extracted_text = extracted_text.strip()
+        ocr_succeeded = True
+        message = "Loaded schedule from text file."
+
+    # Case B: PDF Document
+    elif ext == ".pdf":
         try:
             reader = PdfReader(io.BytesIO(file_bytes))
             pages_text = []
@@ -222,7 +232,7 @@ async def upload_question_endpoint(file: UploadFile = File(...)):
     return {
         "success": True,
         "filename": filename,
-        "file_type": "pdf" if ext == ".pdf" else "image",
+        "file_type": "text" if ext == ".txt" else ("pdf" if ext == ".pdf" else "image"),
         "raw_text": parse_result["raw_text"],
         "parsed_schedule": parse_result["parsed_schedule"],
         "candidate_schedules": parse_result["candidate_schedules"],

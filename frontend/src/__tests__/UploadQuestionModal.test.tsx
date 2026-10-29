@@ -36,11 +36,29 @@ describe('UploadQuestionModal Component', () => {
     );
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    const txtFile = new File(['dummy content'], 'schedule.txt', { type: 'text/plain' });
+    const docxFile = new File(['dummy content'], 'schedule.docx', { type: 'application/msword' });
+
+    fireEvent.change(fileInput, { target: { files: [docxFile] } });
+
+    expect(screen.getByText(/Unsupported file type '\.docx'/i)).toBeDefined();
+  });
+
+  it('accepts a valid .txt file and displays text file info card', () => {
+    render(
+      <UploadQuestionModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onConfirmSchedule={vi.fn()}
+      />
+    );
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const txtFile = new File(['R1(A), W2(A), R1(B)'], 'schedule.txt', { type: 'text/plain' });
 
     fireEvent.change(fileInput, { target: { files: [txtFile] } });
 
-    expect(screen.getByText(/Unsupported file type '\.txt'/i)).toBeDefined();
+    expect(screen.getAllByText('schedule.txt').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Text File/i).length).toBeGreaterThan(0);
   });
 
   it('uploads valid image, displays extracted schedule, and allows user correction', async () => {

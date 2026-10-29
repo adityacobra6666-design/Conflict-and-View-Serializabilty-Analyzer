@@ -470,6 +470,40 @@ class TestPDFUpload:
 
 
 # ============================================================================
+# 14. Plain text file (.txt) upload
+# ============================================================================
+class TestTextFileUpload:
+    def test_txt_file_inline_schedule(self):
+        txt_content = b"Schedule S: R1(A), W2(A), R1(B), W2(B)"
+        response = client.post(
+            "/api/upload/question",
+            files={"file": ("schedule.txt", txt_content, "text/plain")}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["file_type"] == "text"
+        assert data["operation_count"] == 4
+        assert data["parsed_schedule"] == "R1(A), W2(A), R1(B), W2(B)"
+        assert data["is_valid"] is True
+
+    def test_txt_file_tabular_schedule(self):
+        txt_content = b"T1\tT2\nR(A)\n\tR(A)\nW(A)\n\tW(B)"
+        response = client.post(
+            "/api/upload/question",
+            files={"file": ("table_schedule.txt", txt_content, "text/plain")}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["file_type"] == "text"
+        assert data["operation_count"] == 4
+        assert "R1(A)" in data["parsed_schedule"]
+        assert "R2(A)" in data["parsed_schedule"]
+        assert data["is_valid"] is True
+
+
+# ============================================================================
 # 14. Operations with line breaks between them
 # ============================================================================
 class TestLineBreakSeparated:

@@ -24,7 +24,7 @@ interface UploadQuestionModalProps {
   onConfirmSchedule: (scheduleText: string, andAnalyze?: boolean) => void;
 }
 
-const SUPPORTED_EXTS = ['png', 'jpg', 'jpeg', 'webp', 'pdf'];
+const SUPPORTED_EXTS = ['png', 'jpg', 'jpeg', 'webp', 'pdf', 'txt'];
 
 export const UploadQuestionModal: React.FC<UploadQuestionModalProps> = ({
   isOpen,
@@ -79,7 +79,7 @@ export const UploadQuestionModal: React.FC<UploadQuestionModalProps> = ({
 
     const ext = selectedFile.name.split('.').pop()?.toLowerCase();
     if (!ext || !SUPPORTED_EXTS.includes(ext)) {
-      setErrorMsg(`Unsupported file type '.${ext || 'unknown'}'. Please upload a PNG, JPG, JPEG, WEBP image or PDF document.`);
+      setErrorMsg(`Unsupported file type '.${ext || 'unknown'}'. Please upload a PNG, JPG, JPEG, WEBP image, PDF document, or TXT file.`);
       return;
     }
 
@@ -187,7 +187,7 @@ export const UploadQuestionModal: React.FC<UploadQuestionModalProps> = ({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf"
+                accept=".png,.jpg,.jpeg,.webp,.pdf,.txt,image/png,image/jpeg,image/webp,application/pdf,text/plain"
                 className="hidden"
                 onClick={(e) => {
                   (e.target as HTMLInputElement).value = '';
@@ -208,7 +208,7 @@ export const UploadQuestionModal: React.FC<UploadQuestionModalProps> = ({
                   {file ? file.name : "Click to browse or drag & drop file"}
                 </p>
                 <p className="text-xs text-slate-400 mt-1">
-                  Supported formats: PNG, JPG, JPEG, WEBP, PDF (Exam screenshots, question papers, notes)
+                  Supported formats: PNG, JPG, JPEG, WEBP, PDF, TXT (Text files, exam screenshots, question papers, notes)
                 </p>
               </div>
 
@@ -241,14 +241,16 @@ export const UploadQuestionModal: React.FC<UploadQuestionModalProps> = ({
               </div>
             )}
 
-            {/* PDF File Info Card */}
+            {/* Non-Image (PDF / TXT) File Info Card */}
             {file && !filePreviewUrl && (
               <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-slate-50 dark:bg-slate-950 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-red-500" />
+                  <FileText className={`w-5 h-5 ${file.name.toLowerCase().endsWith('.txt') ? 'text-blue-500' : 'text-red-500'}`} />
                   <div>
                     <span className="font-bold text-slate-800 dark:text-slate-200 block">{file.name}</span>
-                    <span className="text-slate-400 text-[11px]">PDF Document ({(file.size / 1024).toFixed(1)} KB)</span>
+                    <span className="text-slate-400 text-[11px]">
+                      {file.name.toLowerCase().endsWith('.txt') ? 'Text File' : 'PDF Document'} ({(file.size / 1024).toFixed(1)} KB)
+                    </span>
                   </div>
                 </div>
                 <button
