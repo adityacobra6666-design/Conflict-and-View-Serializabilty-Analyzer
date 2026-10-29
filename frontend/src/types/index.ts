@@ -181,4 +181,9 @@ export interface QuestionUploadResponse {
   ai_available: boolean;
   ai_used: boolean;
   message: string;
+  ocr_succeeded: boolean;
+  confidence_score?: number;
+  status?: string;
+  warnings?: string[];
+  selection_reason?: string;
 }

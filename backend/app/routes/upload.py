@@ -3,51 +3,83 @@ import base64
 import io
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from pypdf import PdfReader
-from PIL import Image, ImageEnhance
+from PIL import Image
 import pytesseract
-from app.algorithms.schedule_extractor import parse_schedule_from_text
+from app.algorithms.schedule_extractor import (
+    parse_schedule_from_text,
+    extract_table_schedule_from_boxes,
+    deduplicate_ocr_ops,
+)
+from app.algorithms.image_preprocessor import (
+    prepare_image_variants,
+    normalize_image_mode,
+)
 import httpx
 
 router = APIRouter(prefix="/api/upload", tags=["Document & Question Upload"])
 
 SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".pdf"}
 
-def extract_text_from_image_bytes(file_bytes: bytes) -> str:
+
+def preprocess_image(file_bytes: bytes) -> Image.Image:
     """
-    Robust local OCR extraction from image bytes using PIL preprocessing and Tesseract.
-    Handles transparency, scales small images, enhances contrast, and executes
-    PSM modes optimized for document lines and full blocks.
+    Backwards-compatible helper returning a clean non-destructively preprocessed PIL Image.
     """
     try:
-        image = Image.open(io.BytesIO(file_bytes))
-        # Handle alpha channels (RGBA, LA, P)
-        if image.mode in ('RGBA', 'LA', 'P'):
-            rgb_img = Image.new('RGB', image.size, (255, 255, 255))
-            if image.mode == 'P':
-                image = image.convert('RGBA')
-            rgb_img.paste(image, mask=image.split()[-1] if 'A' in image.mode else None)
-            image = rgb_img
-        elif image.mode != 'RGB':
-            image = image.convert('RGB')
+        base = Image.open(io.BytesIO(file_bytes))
+        return normalize_image_mode(base)
+    except Exception:
+        return Image.new('RGB', (100, 100), (255, 255, 255))
 
-        gray = image.convert('L')
-        w, h = gray.size
-        # Upscale if image resolution is low to improve OCR character detection
-        if w < 1200 or h < 600:
-            scale = max(2, min(4, int(1600 / max(w, 1))))
-            gray = gray.resize((w * scale, h * scale), Image.Resampling.LANCZOS)
 
-        enhancer = ImageEnhance.Contrast(gray)
-        contrast_img = enhancer.enhance(1.8)
+def extract_text_from_image_bytes(file_bytes: bytes) -> str:
+    """
+    High-accuracy multi-candidate OCR extraction.
+    Evaluates candidates from non-destructive image preprocessing variants (raw, grayscale, scaled, mild contrast)
+    using schedule-aware validation. Selects the candidate that yields the highest-coherence schedule.
+    """
+    try:
+        variants = prepare_image_variants(file_bytes)
+        if not variants:
+            return ""
 
-        # Run with single block (--psm 6) and auto segmentation (--psm 3)
-        text_block = pytesseract.image_to_string(contrast_img, config='--psm 6')
-        text_auto = pytesseract.image_to_string(gray, config='--psm 3')
+        best_text = ""
+        best_score = -1.0
+        var_dict = dict(variants)
+        priority_order = ['original', 'grayscale', 'mild_contrast', 'scaled', 'autocontrast']
 
-        combined = f"{text_block}\n{text_auto}".strip()
-        return combined
+        for v_name in priority_order:
+            if v_name not in var_dict:
+                continue
+            var_img = var_dict[v_name]
+            for psm in (6, 3):
+                try:
+                    txt = pytesseract.image_to_string(var_img, config=f'--psm {psm}').strip()
+                    if not txt:
+                        continue
+                    parsed = parse_schedule_from_text(txt)
+                    score = parsed["confidence_score"] * (parsed["operation_count"] + 1)
+                    has_labeled = any(c.get("source_type") == "labeled" for c in parsed["candidate_schedules"])
+                    if has_labeled:
+                        score += 2.0
+
+                    if score > best_score:
+                        best_score = score
+                        best_text = txt
+
+                    # Fast exit: if exact match on a labeled schedule with >= 2 operations, return immediately
+                    if parsed["status"] == "exact_match" and parsed["operation_count"] >= 2 and has_labeled:
+                        return best_text
+                except Exception:
+                    pass
+
+        # Fallback if no text extracted through variants
+        if not best_text and variants:
+            best_text = pytesseract.image_to_string(variants[0][1], config='--psm 6').strip()
+
+        return best_text
     except Exception as e:
-        print(f"Local OCR error: {e}")
+        print(f"Local OCR extraction error: {e}")
         return ""
 
 
@@ -55,10 +87,10 @@ def extract_text_from_image_bytes(file_bytes: bytes) -> str:
 async def upload_question_endpoint(file: UploadFile = File(...)):
     """
     Accepts an uploaded PNG, JPG, JPEG, WEBP, or PDF question document.
-    Extracts question text using local OCR (pytesseract) or PDF text extraction,
+    Extracts question text using multi-candidate local OCR (pytesseract) or PDF text extraction,
     with fallback to AI Vision (if GEMINI_API_KEY configured).
     Parses transaction operations into standard DBMS format: R1(X), W2(X), ...
-    Returns extracted text and parsed schedule with validation results for user review.
+    Returns structured confidence, candidate schedules, and validation results.
     """
     filename = file.filename or "uploaded_file"
     ext = os.path.splitext(filename.lower())[1]
@@ -78,6 +110,7 @@ async def upload_question_endpoint(file: UploadFile = File(...)):
     ai_used = False
     extracted_text = ""
     message = ""
+    ocr_succeeded = False
 
     # Case A: PDF Document
     if ext == ".pdf":
@@ -90,7 +123,6 @@ async def upload_question_endpoint(file: UploadFile = File(...)):
                     pages_text.append(t)
             extracted_text = "\n\n".join(pages_text).strip()
 
-            # Check if digital text contains operations; if not (e.g. scanned PDF), try OCR on embedded images
             parsed_initial = parse_schedule_from_text(extracted_text)
             if parsed_initial["operation_count"] == 0:
                 ocr_texts = []
@@ -101,10 +133,13 @@ async def upload_question_endpoint(file: UploadFile = File(...)):
                             ocr_texts.append(t)
                 if ocr_texts:
                     extracted_text = "\n\n".join(ocr_texts).strip()
+                    ocr_succeeded = True
                     message = "Extracted text and schedule from scanned PDF images using local OCR."
                 elif extracted_text:
+                    ocr_succeeded = True
                     message = "Extracted text from PDF document."
             else:
+                ocr_succeeded = True
                 message = "Extracted schedule successfully from PDF document."
         except Exception as e:
             extracted_text = ""
@@ -117,16 +152,34 @@ async def upload_question_endpoint(file: UploadFile = File(...)):
             if ai_res["success"] and ai_res["text"]:
                 extracted_text = ai_res["text"]
                 ai_used = True
+                ocr_succeeded = True
                 message = "Extracted text and schedule using AI Document Vision (Gemini)."
 
     # Case B: Image (PNG, JPG, JPEG, WEBP)
     else:
-        # Run local OCR first (requires zero API key and works offline)
+        # Run local OCR first with multi-candidate evaluation
         extracted_text = extract_text_from_image_bytes(file_bytes)
+
+        if extracted_text.strip():
+            ocr_succeeded = True
+
+        # Also attempt bounding-box based table extraction directly from image
+        table_ops_from_boxes = extract_table_schedule_from_boxes(file_bytes)
         parsed_temp = parse_schedule_from_text(extracted_text)
 
-        if parsed_temp["operation_count"] > 0:
+        # If bounding-box table extraction found operations, prioritize its visual column layout
+        if table_ops_from_boxes and len(table_ops_from_boxes) >= parsed_temp["operation_count"]:
+            table_text = ", ".join(table_ops_from_boxes)
+            if extracted_text:
+                extracted_text = f"Schedule S: {table_text}\n\n{extracted_text}"
+            else:
+                extracted_text = f"Schedule S: {table_text}"
+            parsed_temp = parse_schedule_from_text(extracted_text)
+
+        if parsed_temp["status"] in ("exact_match", "high_confidence"):
             message = "Schedule successfully recognized and extracted using local OCR."
+        elif parsed_temp["status"] == "needs_review":
+            message = "Schedule extracted with warnings. Please review the highlighted operations before analysis."
         elif ai_available:
             # Fall back to AI vision if local OCR didn't find operations
             mime_map = {
@@ -140,11 +193,15 @@ async def upload_question_endpoint(file: UploadFile = File(...)):
             if ai_res["success"] and ai_res["text"]:
                 extracted_text = ai_res["text"]
                 ai_used = True
+                ocr_succeeded = True
                 message = "Extracted text and schedule from image using AI Vision (Gemini)."
             else:
-                message = "Local OCR did not detect operations. AI Vision also could not read the schedule."
+                if ocr_succeeded:
+                    message = "Text was recognized from the image, but no valid DBMS transaction operations were found."
+                else:
+                    message = "No text could be recognized from the image. AI Vision also could not read the schedule."
         else:
-            if extracted_text.strip():
+            if ocr_succeeded:
                 message = "Text was recognized from the image, but no valid DBMS transaction operations were found."
             else:
                 message = "No text could be recognized from the image. Please upload a clear photo or screenshot."
@@ -157,7 +214,10 @@ async def upload_question_endpoint(file: UploadFile = File(...)):
             message = f"Found {parse_result['operation_count']} transaction operations in schedule."
     else:
         if not message:
-            message = "No recognizable transaction operations found in the question."
+            if ocr_succeeded:
+                message = "Text was detected, but no valid transaction schedule was found. Please check the raw text below."
+            else:
+                message = "No recognizable transaction operations found in the question."
 
     return {
         "success": True,
@@ -171,9 +231,14 @@ async def upload_question_endpoint(file: UploadFile = File(...)):
         "is_valid": parse_result["is_valid"],
         "validation_errors": parse_result["validation_errors"],
         "validation_warnings": parse_result["validation_warnings"],
+        "confidence_score": parse_result.get("confidence_score", 0.0),
+        "status": parse_result.get("status", "ocr_error"),
+        "warnings": parse_result.get("warnings", []),
+        "selection_reason": parse_result.get("selection_reason", ""),
         "ai_available": ai_available,
         "ai_used": ai_used,
-        "message": message
+        "message": message,
+        "ocr_succeeded": ocr_succeeded
     }
 
 
@@ -183,10 +248,9 @@ async def call_gemini_vision(file_bytes: bytes, mime_type: str, api_key: str) ->
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
 
     prompt = (
-        "You are an expert DBMS professor. The user uploaded an image/document containing a transaction scheduling problem. "
-        "1. Transcribe the full question text faithfully. "
-        "2. Identify the transaction schedule operations (e.g., R1(X), W2(X), etc.) in their EXACT chronological order. "
-        "Output the transcription followed by a line starting with: 'SCHEDULE: <operations separated by comma>'."
+        "You are an expert OCR and DBMS schedule extractor. Extract the database transaction schedule from this image/document. "
+        "Transcribe only the operations in standard DBMS notation: e.g. R1(X), W2(X), R3(Y), W1(X), W2(Y), R1(Y), W3(X). "
+        "Preserve exact chronological order. Output the schedule clearly as: Schedule: <comma-separated operations>."
     )
 
     payload = {
@@ -202,11 +266,7 @@ async def call_gemini_vision(file_bytes: bytes, mime_type: str, api_key: str) ->
                     }
                 ]
             }
-        ],
-        "generationConfig": {
-            "temperature": 0.1,
-            "maxOutputTokens": 1024
-        }
+        ]
     }
 
     try:
@@ -214,9 +274,11 @@ async def call_gemini_vision(file_bytes: bytes, mime_type: str, api_key: str) ->
             resp = await client.post(url, json=payload)
             if resp.status_code == 200:
                 data = resp.json()
-                text = data["candidates"][0]["content"]["parts"][0]["text"]
-                return {"success": True, "text": text}
-            else:
-                return {"success": False, "error": f"Gemini API returned HTTP {resp.status_code}"}
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        return {"success": True, "text": parts[0].get("text", "")}
+            return {"success": False, "text": "", "error": f"API error: {resp.status_code}"}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "text": "", "error": str(e)}

@@ -60,7 +60,8 @@ describe('UploadQuestionModal Component', () => {
       validation_warnings: [],
       ai_available: false,
       ai_used: false,
-      message: 'Schedule successfully recognized and extracted using local OCR.'
+      message: 'Schedule successfully recognized and extracted using local OCR.',
+      ocr_succeeded: true
     };
 
     vi.spyOn(apiService, 'uploadQuestionFile').mockResolvedValue(mockUploadResponse);
@@ -119,7 +120,8 @@ describe('UploadQuestionModal Component', () => {
       validation_warnings: [],
       ai_available: false,
       ai_used: false,
-      message: 'Found 2 transaction operations in schedule.'
+      message: 'Found 2 transaction operations in schedule.',
+      ocr_succeeded: true
     };
 
     vi.spyOn(apiService, 'uploadQuestionFile').mockResolvedValue(mockUploadResponse);
@@ -163,7 +165,8 @@ describe('UploadQuestionModal Component', () => {
       validation_warnings: [],
       ai_available: false,
       ai_used: false,
-      message: 'Extracted schedule successfully from PDF document.'
+      message: 'Extracted schedule successfully from PDF document.',
+      ocr_succeeded: true
     };
 
     vi.spyOn(apiService, 'uploadQuestionFile').mockResolvedValue(mockUploadResponse);

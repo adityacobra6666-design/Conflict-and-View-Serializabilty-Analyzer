@@ -297,20 +297,49 @@ export const UploadQuestionModal: React.FC<UploadQuestionModalProps> = ({
           <div className="flex flex-col gap-4 animate-in fade-in duration-200">
             
             {/* Status & Method Notice */}
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs flex items-start gap-2.5">
+            <div className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${
+              extractedData.operation_count > 0
+                ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800'
+                : extractedData.ocr_succeeded
+                  ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800'
+                  : 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800'
+            }`}>
               {extractedData.operation_count > 0 ? (
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-              ) : (
+              ) : extractedData.ocr_succeeded ? (
                 <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
               )}
               <div className="flex-1 space-y-0.5">
-                <span className="font-bold text-slate-800 dark:text-slate-200 block">
-                  {extractedData.message}
-                </span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-bold text-slate-800 dark:text-slate-200 block">
+                    {extractedData.message}
+                  </span>
+                  {extractedData.confidence_score !== undefined && extractedData.confidence_score > 0 && (
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0 ${
+                      extractedData.status === 'exact_match'
+                        ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200'
+                        : extractedData.status === 'high_confidence'
+                          ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200'
+                          : 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200'
+                    }`}>
+                      {extractedData.status === 'exact_match'
+                        ? `Exact Match (${Math.round(extractedData.confidence_score * 100)}%)`
+                        : extractedData.status === 'high_confidence'
+                          ? `High Confidence (${Math.round(extractedData.confidence_score * 100)}%)`
+                          : `Review Needed (${Math.round(extractedData.confidence_score * 100)}%)`}
+                    </span>
+                  )}
+                </div>
                 <span className="text-[11px] text-slate-400">
-                  {extractedData.ai_used 
-                    ? 'AI vision transcribed the question document and identified transaction operations.' 
-                    : 'Local OCR engine extracted text and parsed transaction operations with zero external API dependencies.'}
+                  {extractedData.operation_count > 0
+                    ? (extractedData.ai_used 
+                      ? 'AI vision transcribed the question document and identified transaction operations.' 
+                      : 'Local OCR engine extracted text and parsed transaction operations with zero external API dependencies.')
+                    : extractedData.ocr_succeeded
+                      ? 'Text was detected, but no valid transaction schedule was found. You can manually type operations below (e.g. R1(X), W2(X)).'
+                      : 'The OCR engine could not extract any text. Try uploading a clearer image or screenshot.'}
                 </span>
               </div>
             </div>
